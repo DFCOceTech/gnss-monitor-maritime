@@ -1,0 +1,37 @@
+device:
+  port: /dev/ttyACM0
+  baud_rate: 115200
+
+vessel:
+  baseline_max_speed_mps: 0.5     # only update baseline at anchor / slow drift
+  position_jump_threshold_m: 100  # DR deviation above this = possible spoofing
+  min_speed_for_dr_mps: 0.5       # dead-reckoning check only when underway
+  track_history_minutes: 10       # minutes of position track on dashboard
+
+baseline:
+  duration_hours: 4.0    # longer window — vessel may anchor for hours
+  min_samples: 100
+
+detection:
+  threshold:
+    jamming_state_warn: 2
+    spoof_det_state_warn: 2
+    jam_indicator_warn: 80
+    cn0_drop_db: 6.0
+    num_sv_min: 4
+  statistical:
+    zscore_threshold: 3.5  # higher than static — sea multipath raises normal variance
+    min_baseline_samples: 60
+
+storage:
+  db_path: /home/obs-pi-01/gnss-monitor-maritime/data/gnss_monitor.db
+  retain_days: 90
+
+web:
+  host: 0.0.0.0
+  port: 5000
+  debug: false
+
+logging:
+  level: INFO
+  log_file: /home/obs-pi-01/gnss-monitor-maritime/logs/gnss_monitor.log
