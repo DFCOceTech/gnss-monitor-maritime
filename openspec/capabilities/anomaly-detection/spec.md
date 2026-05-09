@@ -35,6 +35,17 @@ Each event SHALL carry: event_type, severity (warning/critical), attribution tex
 ### REQ-DET-008: Baseline User Control
 The user SHALL be able to set the baseline duration via the dashboard (0.25–24 h range).
 
+### REQ-DET-010: Dead-Reckoning Position-Jump Detection
+When vessel speed ≥ `min_speed_for_dr_mps` (default 0.5 m/s), the system SHALL estimate the expected current position by integrating the last known NED velocity over the elapsed time since the previous sample. If the haversine distance between the actual and dead-reckoning position exceeds `position_jump_threshold_m` (default 100 m), the system SHALL create a critical severity spoofing event. Both position and velocity would need to be spoofed coherently to evade this check.
+
+### REQ-DET-011: Velocity-Gated Baseline
+The baseline SHALL only be updated from samples where `speed_mps < baseline_max_speed_mps` (default 0.5 m/s). This ensures the baseline reflects anchor/port conditions rather than underway sea-state multipath.
+
+### SCENARIO-DET-004: Dead-Reckoning Position Jump
+**GIVEN** vessel moving at 5 m/s, baseline established
+**WHEN** reported position jumps 500 m from dead-reckoning estimate in one cycle
+**THEN** one critical spoofing event of type 'spoofing' is created with deviation_m in metric_values
+
 ## Acceptance Scenarios
 
 ### SCENARIO-DET-001: Hardware Jamming

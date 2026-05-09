@@ -30,13 +30,13 @@ Reads UBX binary protocol, detects spoofing and jamming, serves a real-time Flas
 ./scripts/deploy.sh
 
 # SSH to Pi and tail logs
-ssh obs-pi-01@zenith.local "journalctl -u gnss-monitor -f"
+ssh obs-pi-01@zenith.local "journalctl -u gnss-monitor-maritime -f"
 
 # Restart service
-ssh obs-pi-01@zenith.local "sudo systemctl restart gnss-monitor"
+ssh obs-pi-01@zenith.local "sudo systemctl restart gnss-monitor-maritime"
 
 # Manual test run (Pi)
-ssh obs-pi-01@zenith.local "cd ~/gnss-monitor && python3 app.py"
+ssh obs-pi-01@zenith.local "cd ~/gnss-monitor-maritime && python3 app.py"
 
 # Run tests locally (mock serial)
 pytest tests/ -v --tb=short
@@ -74,7 +74,9 @@ pytest tests/ -v --tb=short
 
 - **Protocol**: UBX binary only (pyubx2); device NACKs CFG-PRT/CFG-MSG on USB — collector uses polling mode (raw UBX poll frames at 1 Hz, not auto-output)
 - **Trigger**: NAV-PVT arrival drives 1 Hz heartbeat; SAT and RF data used from most recent parse
-- **Detection**: Two layers — hardware threshold (jammingState, spoofDetState) + statistical z-score vs baseline
-- **Baseline**: SQLite ring-window over configurable hours, recomputed every 5 min once established
-- **Dashboard**: Flask + Flask-SocketIO (threading mode), Plotly.js charts, Bootstrap 5 dark theme
-- **Storage**: SQLite WAL mode; gnss_samples, satellite_metrics, rf_metrics, baseline_stats, events
+- **Detection**: Three layers — hardware threshold (SEC-SIG + MON-RF), dead-reckoning position-jump check, statistical z-score vs baseline
+- **Dead-reckoning**: Each sample computes expected position from last NED velocity × elapsed time; deviation > threshold → critical spoofing event
+- **Baseline**: Velocity-gated (only updates when speed < 0.5 m/s); SQLite ring-window, recomputed every 5 min once established
+- **Dashboard**: Flask + Flask-SocketIO (threading mode), Plotly.js charts, Bootstrap 5 dark theme; includes Vessel State card and Position Track chart
+- **Storage**: SQLite WAL mode; gnss_samples (with velocity columns), satellite_metrics, rf_metrics, sec_sig_metrics, signal_metrics, baseline_stats, events
+- **Service name**: `gnss-monitor-maritime` (not `gnss-monitor`); deployed to `~/gnss-monitor-maritime/`

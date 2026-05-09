@@ -33,5 +33,20 @@
 
 ## KI-006: systemd service requires interactive sudo for restart
 **Status**: Open
-**Description**: `sudo systemctl restart gnss-monitor` fails over non-interactive SSH (`sudo: a terminal is required`). The service can only be restarted by the user from an interactive Pi terminal session.
+**Description**: `sudo systemctl restart gnss-monitor-maritime` fails over non-interactive SSH (`sudo: a terminal is required`). The service can only be restarted from an interactive Pi terminal session.
 **Mitigation**: Add a NOPASSWD sudoers rule for the specific systemctl command, or use `sudo -S` with password piped in deploy.sh.
+
+## KI-008: Velocity field scaling unverified underway
+**Status**: Open — pending sea trial
+**Description**: `gSpeed` is assumed to be a raw integer in mm/s (multiplied by 1e-3 for m/s). `headMot` is assumed to be pre-scaled to degrees by pyubx2. `velN/E/D` are assumed mm/s. None of these assumptions have been verified against an independent reference (ship's log, compass) at sea.
+**Mitigation**: On first underway transit, compare `speed_kn` in the dashboard against ship's log speed. If reads ~1.944× too high, remove the `× 1e-3` scaling from `_parse_pvt()`. Verify `course_deg` tracks compass heading at speed > 1 kn.
+
+## KI-009: Dead-reckoning threshold not field-validated
+**Status**: Open — pending sea trial
+**Description**: `position_jump_threshold_m` is set to 100 m as a reasonable starting value, but has not been validated at sea. Actual GPS wander underway depends on sea state, antenna motion, and multipath. The threshold may need tuning to avoid false positives in rough conditions or false negatives against slow-drift spoofing.
+**Mitigation**: Monitor DR deviation during first sea trial; log `deviation_m` from any position_jump events. Adjust `config.yaml` accordingly.
+
+## KI-010: Baseline speed gate may be too tight in mild current
+**Status**: Open
+**Description**: `baseline_max_speed_mps = 0.5` (≈1 knot) excludes samples during slow tidal drift or swinging at anchor in current. In strong tidal areas, the vessel may rarely be below 0.5 m/s even at anchor, causing the baseline to never update.
+**Mitigation**: Monitor `baseline_samples` in the dashboard when at anchor. If it stays at 0 despite being anchored, raise `vessel.baseline_max_speed_mps` in `config.yaml` (e.g., to 1.0 m/s).

@@ -32,13 +32,19 @@ The dashboard SHALL display a security panel showing: SEC-SIG overall jammingSta
 ### REQ-DASH-008: OSNMA Authentication Panel
 The dashboard SHALL display a Galileo OSNMA authentication panel showing counts of authenticated, unauthenticated, and unknown signals. When firmware does not support OSNMA, the panel SHALL indicate "Firmware update required" rather than showing zero counts as a failure.
 
+### REQ-DASH-009: Vessel State Card
+The dashboard SHALL display a Vessel State card showing: speed over ground (knots), course over ground (degrees), and current position (lat/lon). When speed is below the device's heading validity threshold, course SHALL be displayed as received from the receiver (typically 0.0°).
+
+### REQ-DASH-010: Position Track Chart
+The dashboard SHALL display a Plotly scatter chart of the vessel's recent position track (configurable history, default 10 minutes). Each point SHALL be annotated with speed and course. The most recent position SHALL be highlighted distinctly.
+
 ## Implementation Status (2026-05-09)
 
 **Status**: Implemented and E2E verified (2026-05-09)
 
 ### What's Built
-- `app.py` — Flask routes + Flask-SocketIO; background emitter at 1 Hz; `sec_sig` and `osnma` state fields
-- `templates/dashboard.html` — Bootstrap 5 dark, Plotly.js, Socket.IO client; SEC-SIG and OSNMA panels
+- `app.py` — Flask routes + Flask-SocketIO; background emitter at 1 Hz; `sec_sig`, `osnma`, `speed_kn`, `course_deg`, `track` state fields; `_track` deque ring buffer
+- `templates/dashboard.html` — Bootstrap 5 dark, Plotly.js, Socket.IO client; SEC-SIG, OSNMA, Vessel State, and Position Track panels
 - `templates/events.html` — Table + timeline chart, detail modal
 - `/api/state`, `/api/events`, `/api/history`, `/api/baseline/duration` REST endpoints
 

@@ -14,7 +14,7 @@
 - **Messages used**:
   | Message | Class | ID | Description |
   |---------|-------|-----|-------------|
-  | NAV-PVT | 0x01 | 0x07 | Position/velocity/time + spoofDetState |
+  | NAV-PVT | 0x01 | 0x07 | Position/velocity/time + spoofDetState + vessel velocity (gSpeed, headMot, velN/E/D) |
   | NAV-SAT | 0x01 | 0x35 | Per-satellite C/N0, elevation, azimuth |
   | NAV-STATUS | 0x01 | 0x03 | Fix status (backup spoofDetState) |
   | MON-RF | 0x0A | 0x38 | Per-band jamming state, AGC, noise |
@@ -24,9 +24,18 @@
 ## Storage
 
 - **Database**: SQLite 3, WAL mode
-- **Path**: `/home/obs-pi-01/gnss-monitor/data/gnss_monitor.db`
+- **Path**: `/home/obs-pi-01/gnss-monitor-maritime/data/gnss_monitor.db`
 - **Retention**: 90 days (configurable via `storage.retain_days`)
 - **Tables**: gnss_samples, satellite_metrics, rf_metrics, sec_sig_metrics, signal_metrics, baseline_stats, events
+- **gnss_samples velocity columns** (maritime addition):
+
+  | Column | Source field | Unit | Notes |
+  |--------|-------------|------|-------|
+  | speed_mps | NAV-PVT gSpeed × 1e-3 | m/s | Ground speed magnitude; 0.0 when below device threshold |
+  | course_deg | NAV-PVT headMot | degrees | Heading of motion (pre-scaled by pyubx2); 0.0 when speed below threshold |
+  | vel_n_mps | NAV-PVT velN × 1e-3 | m/s | North velocity (NED frame) |
+  | vel_e_mps | NAV-PVT velE × 1e-3 | m/s | East velocity (NED frame) |
+  | vel_d_mps | NAV-PVT velD × 1e-3 | m/s | Down velocity (NED frame) |
 
 ## No External APIs
 

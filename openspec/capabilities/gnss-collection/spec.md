@@ -17,6 +17,9 @@ The system SHALL poll NAV-PVT, NAV-SAT, NAV-STATUS, MON-RF, SEC-SIG, and NAV-SIG
 ### REQ-COL-003: NAV-PVT Parsing
 The system SHALL extract: fix_type, numSV, lat, lon, height, hAcc, vAcc, pDOP, spoofDetState.
 
+### REQ-COL-010: NAV-PVT Vessel Velocity Extraction
+The system SHALL additionally extract from NAV-PVT: gSpeed → speed_mps (mm/s × 1e-3), headMot → course_deg (pre-scaled to degrees by pyubx2), velN/velE/velD → vel_n/e/d_mps (mm/s × 1e-3). These fields SHALL be stored in gnss_samples and used for dead-reckoning detection and dashboard display. Note: scaling assumptions (gSpeed raw mm/s, headMot pre-scaled) require underway verification.
+
 ### REQ-COL-004: NAV-SAT Parsing
 The system SHALL extract per-satellite: gnssId, svId, C/N0 (cno), elevation, azimuth, qualityInd.
 

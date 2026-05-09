@@ -50,7 +50,7 @@ The ZED-X20P NACKs CFG-PRT/CFG-MSG on USB. Collector uses **polling mode** with 
 1. Send raw UBX poll frames for NAV-PVT, NAV-SAT, NAV-STATUS, MON-RF, SEC-SIG, NAV-SIG (20 ms apart) — **do NOT reset input buffer** first, to preserve any auto-output bytes already queued
 2. Accumulate all bytes for **1.1 s** — covers the full nav epoch wait for NAV-PVT, plus captures auto-output NAV-SAT/NAV-STATUS if they arrive mid-window
 3. Feed raw bytes into `UBXReader(BytesIO(raw), protfilter=2)` — skips NMEA, finds UBX frames
-4. NAV-PVT → `_parse_pvt()` → updates `_current_pvt`
+4. NAV-PVT → `_parse_pvt()` → updates `_current_pvt` (includes speed_mps, course_deg, vel_n/e/d_mps from gSpeed/headMot/velN/E/D)
 5. NAV-SAT → `_parse_sat()` → updates `_current_sat`
 6. MON-RF → `_parse_rf()` → updates `_current_rf`
 7. NAV-STATUS → extracts `spoofDetState`, patches into `_current_pvt`
@@ -59,11 +59,12 @@ The ZED-X20P NACKs CFG-PRT/CFG-MSG on USB. Collector uses **polling mode** with 
 10. If `_current_pvt` is set: `_emit()` bundles pvt + sat + rf + sec_sig + signals → calls `on_sample()`
 
 ### Sample Processing
-1. Write to SQLite (gnss_samples, satellite_metrics, rf_metrics, sec_sig_metrics, signal_metrics)
-2. Baseline recomputation check
-3. AnomalyDetector.process() → threshold + SEC-SIG + OSNMA + statistical checks → insert events
-4. Build `sec_sig_state` and `osnma_state` summary dicts for dashboard
-5. Update in-memory state dict (includes `sec_sig`, `osnma` keys) + history ring buffer (120 samples)
+1. Write to SQLite (gnss_samples with velocity columns, satellite_metrics, rf_metrics, sec_sig_metrics, signal_metrics)
+2. Baseline recomputation check — **skipped if speed_mps ≥ baseline_max_speed_mps** (velocity gate)
+3. AnomalyDetector.process() → MON-RF/SEC-SIG threshold + DR position-jump + OSNMA + statistical checks → insert events
+4. Update `_track` deque with current lat/lon/speed/course (ring buffer, track_history_minutes × 60 entries)
+5. Build `sec_sig_state`, `osnma_state`, `speed_kn`, `course_deg`, `track` for dashboard state
+6. Update in-memory state dict + history ring buffer (120 samples)
 
 ### Dashboard Push
 - `_background_emitter` task runs every 1 s via socketio.sleep()
@@ -105,3 +106,9 @@ The ZED-X20P NACKs CFG-PRT/CFG-MSG on USB. Collector uses **polling mode** with 
 - **Context**: ZED-X20P NACKs CFG-PRT on USB — auto-output cannot be enabled. Original design assumed stream-mode UBXReader on open serial; this was replaced in session 2.
 - **Decision**: Each cycle polls all six messages (NAV-PVT, NAV-SAT, NAV-STATUS, MON-RF, SEC-SIG, NAV-SIG) explicitly without resetting the input buffer, collects all bytes for 1.1 s (covers NAV-PVT epoch latency), then emits one sample with all data bundled.
 - **Consequences**: All six message types are always fresh per cycle. Auto-output bytes (NAV-SAT, NAV-STATUS at ~0.33 Hz) are also captured. Cycle runs at ~0.9 Hz due to 1.1 s window dominating.
+
+### ADR-005: Velocity-Gated Baseline (Maritime)
+- **Status**: Accepted
+- **Context**: A moving vessel experiences rapidly changing satellite geometry, sea-surface multipath, and superstructure blockage. Calibrating the baseline from underway samples would produce a noisy reference that yields excessive false positives in detection.
+- **Decision**: `BaselineManager` accepts `max_speed_mps` and `get_baseline_window_data()` filters to samples where `speed_mps < max_speed_mps` (default 0.5 m/s). The baseline is therefore always calibrated from at-anchor or in-port conditions.
+- **Consequences**: The baseline accurately reflects clean-sky signal quality. Underway signal variance is checked against this anchor baseline, which is conservative — false positives may increase in challenging RF environments (harbours, channels with obstructions). The z-score threshold is raised to 3.5 (vs 3.0 static) to compensate.
