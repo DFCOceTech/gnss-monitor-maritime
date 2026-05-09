@@ -4,22 +4,28 @@
 
 ## What's Working
 
-- Dashboard live at http://192.168.178.84:5000 — all panels populated
-- 3D fix, 24–25 SVs, 1.35 m h_acc at new antenna location
-- RF bands displaying (L1, L2/L5, E5a) with AGC, noise, jamming indicator
-- SEC-SIG panel: hardware jamming/spoofing state + 7-frequency badge grid (all clear)
-- OSNMA panel: Galileo signal auth status (currently "UNKNOWN" — firmware update required)
-- C/N₀ mean chart and satellite count chart updating in real time
-- Socket.IO push confirmed (browser updates without refresh)
-- SQLite: 7 tables writing — gnss_samples, satellite_metrics, rf_metrics, sec_sig_metrics, signal_metrics, baseline_stats, events
-- Anomaly detection: MON-RF threshold, SEC-SIG per-frequency, OSNMA auth, statistical z-score all active
-- Baseline established at current antenna location
+- Dashboard live at http://192.168.178.84:5000 — all panels populated, E2E verified (2026-05-09)
+- 3D fix, 21–22 SVs at current anchor location
+- **Vessel State card**: speed (kn) + course (°) displaying — confirmed 0.0 kn / 0.0° at rest ✓
+- **Position Track chart**: rendering, 40+ points populated from in-memory ring buffer ✓
+- Velocity fields in DB: speed_mps, course_deg, vel_n_mps, vel_e_mps, vel_d_mps writing correctly ✓
+- RF bands, SEC-SIG, OSNMA panels all present (inherited from static version)
+- Dead-reckoning position-jump detection armed (will fire when speed ≥ 0.5 m/s)
+- Velocity-gated baseline: only updates at anchor (speed < 0.5 m/s) ✓
+- SQLite writing — 7 tables including new velocity columns in gnss_samples
 
-## What's Next
+## What's Next / Underway Verification
 
-1. **Tune zscore_threshold** — consider raising from 3.0 → 3.5 in `config.yaml` to reduce stat_sv_drop false positives (KI-005)
-2. **Firmware update** — update ZED-X20P firmware to a version supporting OSNMA to activate cryptographic Galileo authentication (KI-007)
-3. **Fix interactive sudo** — KI-006: add NOPASSWD sudoers rule so service restart doesn't require interactive Pi session
+1. **Verify velocity scaling** — confirm `speed_kn` tracks actual speed underway (gSpeed assumed mm/s → m/s → kn; verify against ship's log)
+2. **Verify headMot** — confirm `course_deg` tracks actual heading at speed > 0.5 m/s
+3. **Tune DR threshold** — 100 m default may need adjustment based on observed GPS wander at sea
+4. **Let baseline establish** — run at anchor for ≥ 4 h before getting underway for valid baseline calibration
+5. **Firmware update** — OSNMA requires firmware update (KI-007)
+6. **Test position-jump detection** — verify it triggers (and resolves) on a known GNSS outage/recovery
+
+## Known Issues
+
+See `ops/known-issues.md` (inherited from gnss-monitor static)
 
 ## Known Issues
 

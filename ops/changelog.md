@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-05-09 — Maritime Fork: Initial Deployment Verified
+
+**User instruction**: Make a version for a moving ship; deploy and verify on Pi.
+
+### Added (maritime-specific)
+- `src/gnss_monitor/config.py` — `VesselConfig` dataclass (baseline_max_speed_mps, position_jump_threshold_m, min_speed_for_dr_mps, track_history_minutes)
+- `src/gnss_monitor/collector.py` — velocity/heading fields in `_parse_pvt()`: speed_mps, course_deg, vel_n_mps, vel_e_mps, vel_d_mps (from gSpeed, headMot, velN/E/D)
+- `src/gnss_monitor/storage.py` — velocity columns added to gnss_samples; `get_baseline_window_data()` speed-gate parameter; `get_track()` query
+- `src/gnss_monitor/baseline.py` — `max_speed_mps` gate (skip baseline update when underway)
+- `src/gnss_monitor/detector.py` — `_check_position_jump()` dead-reckoning check; `_haversine_m()` helper; `vessel_cfg` wired in
+- `app.py` — `_track` ring buffer; `speed_kn`, `course_deg`, `track` in WebSocket state
+- `templates/dashboard.html` — Vessel State card (speed/course), Position Track chart (Plotly scatter)
+- `config.yaml` — maritime defaults: baseline 4 h, zscore_threshold 3.5, vessel section
+- `systemd/gnss-monitor.service` — renamed to gnss-monitor-maritime.service on Pi
+
+### Verified on Pi (2026-05-09, stationary)
+- Service starts, 3D fix acquired, 21–22 SVs
+- Velocity fields writing to DB: speed_mps ~0.01 m/s (GPS noise floor), course_deg 0.0 (expected at rest)
+- Track buffer: 40+ points populated after 8 seconds
+- Dashboard loads: Vessel State, Track chart, SEC-SIG, OSNMA panels all rendering
+- API: speed_kn=0.0, course_deg=0.0, track=[40 points], sec_sig.jamming_state=1 (OK)
+- Dead-reckoning check armed, not firing (speed < min_speed_for_dr_mps — correct)
+- Velocity-gated baseline active
+
+### Pending (underway verification)
+- gSpeed/headMot/velN/E/D scaling confirmation against ship's log
+- DR position-jump detection first live test
+- Baseline quality at sea vs anchor
+
+---
+
 ## 2026-05-09 — SEC-SIG, NAV-SIG, and OSNMA Pipeline (Session 2 continued)
 
 **User instruction**: Add SEC-SIG and NAV-SIG; update README and spec-anchor docs.
